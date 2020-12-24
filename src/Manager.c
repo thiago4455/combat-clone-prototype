@@ -8,6 +8,7 @@ ALLEGRO_TIMER *timer;
 
 void M_Init(){
     al_init();
+    al_init_image_addon();
     al_install_keyboard();
 
     display = al_create_display(WINDOW_WIDTH, WINDOW_HEIGHT);

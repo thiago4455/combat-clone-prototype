@@ -1,11 +1,12 @@
 #ifndef GAME_H
 #define GAME_H
 #include <allegro5/allegro.h>
+#include <allegro5/allegro_image.h>
 
-static const unsigned int BACKGROUND_COLOR = 0x2A2A2A;
+static const unsigned int BACKGROUND_COLOR = 0x769971;
 
-static const int PLAYER_VELOCITY = 10;
-static const int PLAYER_ROTATION_VELOCITY = 10;
+static const float PLAYER_VELOCITY = 3;
+static const float PLAYER_ROTATION_VELOCITY = 10;
 static const float COOLDOWN = 2.0;
 static const unsigned int MAX_POWER = 20;
 static const int BULLET_VELOCITY = 20;
