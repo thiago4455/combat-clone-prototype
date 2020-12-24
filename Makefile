@@ -1,4 +1,4 @@
-FLAGS = -Wall -lallegro -lallegro_image
+FLAGS = -Wall -lallegro -lallegro_image -lallegro_primitives -lm
 OBJFILES = main.o Manager.o Utils.o Game.o
 TARGET = game
 
