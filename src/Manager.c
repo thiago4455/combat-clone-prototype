@@ -47,10 +47,11 @@ void M_Run(){
             break;
 
         case ALLEGRO_EVENT_TIMER:
-            G_Update();
-            al_clear_to_color(al_map_hex(BACKGROUND_COLOR));
-            G_Render();
-            al_flip_display();
+            if(G_Update() == 0){
+                al_clear_to_color(al_map_hex(BACKGROUND_COLOR));
+                G_Render();
+                al_flip_display();
+            }
         
         default:
             break;

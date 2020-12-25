@@ -9,6 +9,7 @@ static const unsigned int BACKGROUND_COLOR = 0x769971;
 #define PLAYERS_NUMBER 2
 #define MAX_BULLET_QUANTITY 100
 
+static const int MAX_HEALTH = 100;
 static const float PLAYER_VELOCITY = 3;
 static const float PLAYER_ROTATION_VELOCITY = 10;
 static const float COOLDOWN = .1;
@@ -26,10 +27,14 @@ struct Player
     unsigned int Power;
     unsigned int Cooldown;
     unsigned int BulletColor;
+    int Health;
+
+    ALLEGRO_BITMAP *TankBitmap;
 };
 
 struct Bullet
 {
+    int Active;
     float Direction;
     float PosX;
     float PosY;
@@ -62,7 +67,7 @@ void G_ProcessInput(unsigned char key, char type);
 /**
  * Realiza o calculo e atualiza o estado de todas as posições e ações dos players. 
 **/
-void G_Update();
+int G_Update();
 
 /**
  * Renderiza os gráficos na tela

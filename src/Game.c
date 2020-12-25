@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 struct Player Players[PLAYERS_NUMBER];
-ALLEGRO_BITMAP *BITMAP_TANK[PLAYERS_NUMBER];
 struct PLAYER_CONTROLS C_Player[PLAYERS_NUMBER];
 
 struct Bullet bullets[MAX_BULLET_QUANTITY];
@@ -32,26 +31,53 @@ void G_ProcessInput(unsigned char key, char type){
     }
 }
 
-void G_Update(){
+int G_Update(){
     int i;
     for (i = 0; i < PLAYERS_NUMBER; i++)
     {
         PlayerUpdate(&Players[i]);
+        if(Players[i].Health <= 0){
+            // return 1;
+        }
     }
     UpdateBullets();
+
+    return 0;
 }
 
 void G_Render(){
     int i;
     for (i = 0; i < PLAYERS_NUMBER; i++){
-        al_draw_scaled_rotated_bitmap(BITMAP_TANK[i], al_get_bitmap_width(BITMAP_TANK[i]) / 2, al_get_bitmap_height(BITMAP_TANK[i]) / 2, 
+        // 
+        // Draw health
+        // 
+        float max_size = al_get_bitmap_width(Players[i].TankBitmap) > al_get_bitmap_height(Players[i].TankBitmap)? al_get_bitmap_width(Players[i].TankBitmap) : al_get_bitmap_height(Players[i].TankBitmap);
+        const float bar_height = 15;
+        al_draw_rectangle(Players[i].PosX - max_size/2, Players[i].PosY - max_size/2, Players[i].PosX + max_size/2, Players[i].PosY - max_size/2 - bar_height, al_map_hex(Players[i].BulletColor), 1);
+        al_draw_filled_rectangle(Players[i].PosX - max_size/2, Players[i].PosY - max_size/2, Players[i].PosX - max_size/2 + ((float) Players[i].Health/MAX_HEALTH)*max_size, Players[i].PosY - max_size/2 - bar_height, al_map_hex(Players[i].BulletColor));
+
+        // 
+        // Draw Power
+        // 
+        al_draw_filled_rectangle(Players[i].PosX - max_size/2, Players[i].PosY - max_size/2 + 5, Players[i].PosX - max_size/2 + ((float) Players[i].Power/MAX_POWER)*max_size, Players[i].PosY - max_size/2 + 3, al_map_hex(0x00ff00));
+
+
+        // 
+        // Draw Player
+        // 
+        al_draw_scaled_rotated_bitmap(Players[i].TankBitmap, al_get_bitmap_width(Players[i].TankBitmap) / 2, al_get_bitmap_height(Players[i].TankBitmap) / 2, 
                            Players[i].PosX, Players[i].PosY, .5f, .5f, Players[i].Rotation, 0);
     }
 
+    // 
+    // Draw Bullet
+    // 
     for (i = 0; i < MAX_BULLET_QUANTITY; i++)
     {
-        float r = 3 + 30*bullets[i].Power/MAX_POWER;
-        al_draw_filled_circle(bullets[i].PosX, bullets[i].PosY, r, al_map_hex(Players[bullets[i].Owner].BulletColor));
+        if(bullets[i].Active){
+            float r = 3 + 30*bullets[i].Power/MAX_POWER;
+            al_draw_filled_circle(bullets[i].PosX, bullets[i].PosY, r, al_map_hex(Players[bullets[i].Owner].BulletColor));
+        }
     }           
 }
 
@@ -60,8 +86,7 @@ void G_Render(){
 // 
 int initializedPlayers = 0;
 void CreatePlayer(float initialPosX, float initialPosY, float initialRot, struct PLAYER_CONTROLS controller, const char *playerImage, unsigned int bulletColor){
-    Players[initializedPlayers] = (struct Player) { 0, 0, initialPosX, initialPosY, initialRot, 0, 0, 0, bulletColor };
-    BITMAP_TANK[initializedPlayers] = al_load_bitmap(playerImage);
+    Players[initializedPlayers] = (struct Player) { 0, 0, initialPosX, initialPosY, initialRot, 0, 0, 0, bulletColor, MAX_HEALTH, al_load_bitmap(playerImage)};
     C_Player[initializedPlayers] = controller;
     initializedPlayers++;
 }
@@ -98,6 +123,31 @@ void PlayerInputUp(struct Player *player, struct PLAYER_CONTROLS controller, uns
 // Calculations before rendering
 // 
 
+void VerifyPlayerColisions(struct Player *player){
+    int i = 0;
+
+    for (i = 0; i < MAX_BULLET_QUANTITY; i++)
+    {
+        if(bullets[i].Active){
+            float dx = abs(bullets[i].PosX - player->PosX);
+            float dy = abs(bullets[i].PosY - player->PosY);
+            float r = 3 + 30*bullets[i].Power/MAX_POWER;
+            float max_size = .6 * (al_get_bitmap_width(player->TankBitmap) > al_get_bitmap_height(player->TankBitmap)? al_get_bitmap_width(player->TankBitmap) : al_get_bitmap_height(player->TankBitmap));
+
+            if((dx < max_size/2 + r) && (dy < max_size/2 + r) && (player != &Players[bullets[i].Owner])){
+                float minD = ((COOLDOWN * FPS)/MAX_POWER);
+                player->Health -= MAX_HEALTH * (minD + ((1-minD) * bullets[i].Power/MAX_POWER));
+                if(player->Health<0){
+                    player->Health = 0;
+                }
+                bullets[i].Active = 0;
+            }
+        }
+    }
+    
+}
+
+
 void PlayerUpdate(struct Player *player){
     player->Rotation += -ALLEGRO_PI * 0.001 * player->RotationV * PLAYER_ROTATION_VELOCITY;
     player->PosX += player->TranslationV * PLAYER_VELOCITY * cos(player->Rotation);
@@ -115,8 +165,7 @@ void PlayerUpdate(struct Player *player){
                 for (i = MAX_BULLET_QUANTITY - 1; i > 0; i--) {
                     bullets[i] = bullets[i-1];
                 }
-                bullets[0] = (struct Bullet) {player->Rotation, player->PosX, player->PosY, player->Power, player-Players};
-                printf("O: %i", player-Players);
+                bullets[0] = (struct Bullet) {1, player->Rotation, player->PosX, player->PosY, player->Power, player-Players};
                 player->Power = 0;
                 player->Cooldown = COOLDOWN * FPS;
 
@@ -124,14 +173,18 @@ void PlayerUpdate(struct Player *player){
         }
         
     }
+
+    VerifyPlayerColisions(player);
 }
 
 void UpdateBullets(){
     int i;
     for (i = 0; i < MAX_BULLET_QUANTITY; i++)
     {
-        bullets[i].PosX += BULLET_VELOCITY * cos(bullets[i].Direction);
-        bullets[i].PosY += BULLET_VELOCITY * sin(bullets[i].Direction);
+        if(bullets[i].Active){
+            bullets[i].PosX += BULLET_VELOCITY * cos(bullets[i].Direction);
+            bullets[i].PosY += BULLET_VELOCITY * sin(bullets[i].Direction);
+        }
     }
     
 }
